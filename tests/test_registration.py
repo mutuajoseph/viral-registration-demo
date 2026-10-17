@@ -34,7 +34,6 @@ def test_last_ticket_is_never_sold_twice(make_client):
     assert client.get("/stats").json()["confirmed_bookings"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="no idempotency: a double-click books twice")
 def test_double_click_returns_the_same_booking(make_client):
     client = make_client()
     first = register(client, "S-1001", key="a1b2")

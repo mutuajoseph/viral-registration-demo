@@ -15,3 +15,10 @@ CREATE TABLE IF NOT EXISTS bookings (
     created_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (event_id, student_id)              -- one booking per student per event
 );
+
+-- "Have I already handled this exact request?" -> return the same answer.
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    key         TEXT PRIMARY KEY,
+    response    TEXT,                          -- JSON returned the first time
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

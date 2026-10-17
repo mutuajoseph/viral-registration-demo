@@ -1,6 +1,6 @@
 """HTTP layer. Run with: uvicorn app.main:create_app --factory"""
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from app.config import Settings
@@ -37,10 +37,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "Event not found")
 
     @app.post("/events/{event_id}/register")
-    def register(event_id: int, body: RegisterRequest, conn=Depends(get_conn)):
+    def register(
+        event_id: int,
+        body: RegisterRequest,
+        idempotency_key: str | None = Header(default=None),
+        conn=Depends(get_conn),
+    ):
         try:
             return registration.register(
                 conn, email_provider, event_id, body.student_id, body.email,
+                idempotency_key=idempotency_key,
                 work_seconds=settings.simulated_work_seconds,
             )
         except registration.EventNotFound:
