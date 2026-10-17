@@ -3,6 +3,7 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
+from app.cache import TTLCache
 from app.config import Settings
 from app.db import connect, init_db
 from app.services import registration
@@ -19,6 +20,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Campus Tech Night registration")
     app.state.settings = settings
+    event_cache = TTLCache(settings.cache_ttl_seconds)
 
     def get_conn():
         conn = connect(settings.db_path)
@@ -29,8 +31,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/events/{event_id}")
     def read_event(event_id: int, conn=Depends(get_conn)):
+        # Thousands of students read the same event page: serve a cached copy.
+        # seats_left here is only a hint ("about 40 left"); Register asks the DB.
         try:
-            return registration.get_event(conn, event_id)
+            return event_cache.get_or_load(event_id, lambda: registration.get_event(conn, event_id))
         except registration.EventNotFound:
             raise HTTPException(404, "Event not found")
 

@@ -13,6 +13,7 @@ class Settings:
     simulated_work_seconds: float = 0.05
     email_latency_seconds: float = 0.5
     email_failure_rate: float = 0.0
+    cache_ttl_seconds: float = 30.0
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -22,4 +23,5 @@ class Settings:
             simulated_work_seconds=float(os.getenv("SIMULATED_WORK_SECONDS", cls.simulated_work_seconds)),
             email_latency_seconds=float(os.getenv("EMAIL_LATENCY_SECONDS", cls.email_latency_seconds)),
             email_failure_rate=float(os.getenv("EMAIL_FAILURE_RATE", cls.email_failure_rate)),
+            cache_ttl_seconds=float(os.getenv("CACHE_TTL_SECONDS", cls.cache_ttl_seconds)),
         )
