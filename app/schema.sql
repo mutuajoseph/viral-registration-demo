@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS events (
     venue       TEXT    NOT NULL,
     starts_at   TEXT    NOT NULL,
     capacity    INTEGER NOT NULL,
-    seats_left  INTEGER NOT NULL
+    seats_left  INTEGER NOT NULL CHECK (seats_left >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS bookings (
     event_id    INTEGER NOT NULL REFERENCES events(id),
     student_id  TEXT    NOT NULL,
     email       TEXT    NOT NULL,
-    created_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (event_id, student_id)              -- one booking per student per event
 );

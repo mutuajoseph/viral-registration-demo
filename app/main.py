@@ -47,6 +47,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "Event not found")
         except registration.SoldOut:
             raise HTTPException(409, {"status": "sold_out"})
+        except registration.AlreadyRegistered as e:
+            raise HTTPException(409, {"status": "already_registered", "booking_id": e.booking_id})
         except EmailProviderError:
             # The booking IS saved, but the student is told something went wrong.
             raise HTTPException(502, "Could not send confirmation email")

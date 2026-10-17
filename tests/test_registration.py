@@ -26,7 +26,6 @@ def test_sold_out_is_a_clear_answer(make_client):
     assert response.json()["detail"]["status"] == "sold_out"
 
 
-@pytest.mark.xfail(strict=True, reason="race condition: check and act are separate steps")
 def test_last_ticket_is_never_sold_twice(make_client):
     client = make_client(capacity=1)
     students = [f"S-{n}" for n in range(20)]
@@ -45,7 +44,6 @@ def test_double_click_returns_the_same_booking(make_client):
     assert client.get("/stats").json()["confirmed_bookings"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="no unique constraint on (event_id, student_id)")
 def test_one_booking_per_student(make_client):
     client = make_client()
     register(client, "S-1001", key="phone-1")
