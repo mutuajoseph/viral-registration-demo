@@ -6,8 +6,6 @@ On the `after` branch those markers are gone and every test passes.
 
 from concurrent.futures import ThreadPoolExecutor
 
-import pytest
-
 from tests.conftest import register
 
 
@@ -52,7 +50,6 @@ def test_one_booking_per_student(make_client):
     assert client.get("/stats").json()["confirmed_bookings"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="email is sent inside the request")
 def test_booking_survives_email_outage(make_client):
     client = make_client(email_failure_rate=1.0)
     response = register(client, "S-1001")

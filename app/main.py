@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from app.config import Settings
 from app.db import connect, init_db
 from app.services import registration
-from app.services.email import EmailProviderError, FakeEmailProvider
 
 
 class RegisterRequest(BaseModel):
@@ -17,10 +16,9 @@ class RegisterRequest(BaseModel):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     init_db(settings.db_path, settings.event_capacity)
-    email_provider = FakeEmailProvider(settings.email_latency_seconds, settings.email_failure_rate)
 
     app = FastAPI(title="Campus Tech Night registration")
-    app.state.email_provider = email_provider
+    app.state.settings = settings
 
     def get_conn():
         conn = connect(settings.db_path)
@@ -45,7 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         try:
             return registration.register(
-                conn, email_provider, event_id, body.student_id, body.email,
+                conn, event_id, body.student_id, body.email,
                 idempotency_key=idempotency_key,
                 work_seconds=settings.simulated_work_seconds,
             )
@@ -55,19 +53,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(409, {"status": "sold_out"})
         except registration.AlreadyRegistered as e:
             raise HTTPException(409, {"status": "already_registered", "booking_id": e.booking_id})
-        except EmailProviderError:
-            # The booking IS saved, but the student is told something went wrong.
-            raise HTTPException(502, "Could not send confirmation email")
 
     @app.get("/stats")
     def stats(conn=Depends(get_conn)):
         event = registration.get_event(conn, 1)
         confirmed = conn.execute("SELECT COUNT(*) FROM bookings WHERE event_id = 1").fetchone()[0]
+        emails = dict(conn.execute("SELECT status, COUNT(*) FROM outbox GROUP BY status").fetchall())
         return {
             "capacity": event["capacity"],
             "confirmed_bookings": confirmed,
             "seats_left": event["seats_left"],
-            "emails_sent": len(email_provider.sent),
+            "emails_sent": emails.get("sent", 0),
+            "emails_waiting": emails.get("pending", 0),
             "correct": confirmed <= event["capacity"],
         }
 

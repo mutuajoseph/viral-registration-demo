@@ -4,8 +4,6 @@ import json
 import sqlite3
 import time
 
-from app.services.email import FakeEmailProvider
-
 
 class EventNotFound(Exception):
     pass
@@ -40,7 +38,6 @@ def _stored_response(conn: sqlite3.Connection, key: str) -> dict:
 
 def register(
     conn: sqlite3.Connection,
-    email_provider: FakeEmailProvider,
     event_id: int,
     student_id: str,
     email: str,
@@ -76,7 +73,19 @@ def register(
             (event_id, student_id, email),
         )
         booking_id = cur.lastrowid
-        response = {"status": "confirmed", "booking_id": booking_id}
+
+        # Outbox: the email task is saved together with the booking.
+        # The worker sends it later; the student does not wait for it.
+        title = get_event(conn, event_id)["title"]
+        conn.execute(
+            "INSERT INTO outbox (booking_id, to_email, subject, body) VALUES (?, ?, ?, ?)",
+            (booking_id, email, "You're in!", f"Booking #{booking_id}: {title}"),
+        )
+        response = {
+            "status": "confirmed",
+            "booking_id": booking_id,
+            "message": "You're in! Your email may take a few minutes.",
+        }
 
         if idempotency_key:
             conn.execute(
@@ -90,9 +99,5 @@ def register(
     except BaseException:
         conn.execute("ROLLBACK")
         raise
-
-    # Still inside the request for now (fixed in a later commit).
-    event = get_event(conn, event_id)
-    email_provider.send(email, "You're in!", f"Booking #{booking_id}: {event['title']}")
 
     return response
